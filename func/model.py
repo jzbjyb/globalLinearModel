@@ -53,6 +53,20 @@ class Model:
                 self.delta([[infer_label[i-1], infer_label[i]], observe_data, i-1], -1)
 
 
+    def prim(self, observe_data):
+
+        sample_num = len(observe_data)
+        label_num = len(self.label_list)
+        graph = [[0 for j in xrange(sample_num)] for i in xrange(sample_num)]
+        for i in xrange(sample_num):
+            for j in xrange(i+1, sample_num):
+                if i == j: continue
+                [self[[i, observe_data, i, j]] for l in xrange(label_num)]
+
+
+
+
+
     def viterbi(self, observe_data):
         def argmax(ls): return max(ls, key = lambda x: x[1])
 

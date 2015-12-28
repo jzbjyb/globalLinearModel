@@ -26,10 +26,14 @@ class Tagger:
                 for i in xrange(len(ideal_lable)):
                     correct[0] += 1 if ideal_lable[i] == infer_label[i] else 0
                     correct[1] += 1
-            for (word, label) in zip(observe_data, infer_label):
-                print >> out_file, word + '\t' + label
+            else:
+                ideal_lable = ['' for l in infer_label]
+            for (word, label, labelr) in zip(observe_data, infer_label, ideal_lable):
+                print >> out_file, word + '\t' + label + '\t' + labelr
             #print >> sys.stdout, observe_data
             li += 1
-            print >> sys.stdout, li
+            sys.stdout.write("tag %d sentence  \r" % li)
+            sys.stdout.flush()
             print >> out_file
-        print >> sys.stdout, float(correct[0]) / correct[1]
+        print >> sys.stdout
+        print >> sys.stdout, "correctness: %f" % (float(correct[0]) / correct[1])
