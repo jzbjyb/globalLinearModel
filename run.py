@@ -72,11 +72,35 @@ def gen_features_cmd(args):
 
 
 # Previous word and current tag pair
-prevWordFeature = UniSurrFeature([-1])
+preWordFeature = UniSurrFeature([-1])
 # Next word and current tag pair
 nextWordFeature = UniSurrFeature([1])
+
+# pre pre word and current tag pair
+prepreWordFeature = UniSurrFeature([-2])
+# next next word and current tag pair
+nextnextWordFeature = UniSurrFeature([2])
+
+# pre pre pre word and current tag pair
+preprepreWordFeature = UniSurrFeature([-3])
+# next next next word and current tag pair
+nextnextnextWordFeature = UniSurrFeature([3])
+
+# [-1, 0] and current tag pair
+precuWordFeature = UniSurrFeature([-1, 0])
+# [0, 1] and current tag pair
+cunextWordFeature = UniSurrFeature([0, 1])
+
+# [-2, -1, 0] and current tag pair
+preprecuWordFeature = UniSurrFeature([-2, -1, 0])
+# [-1, 0, 1] and current tag pair
+precunextWordFeature = UniSurrFeature([-1, 0, 1])
+# [0, 1, 2] and current tag pair
+cunextnextWordFeature = UniSurrFeature([0, 1, 2])
+
+
 # Previous word and bigram tags
-prevWordBiFeature = BiSurrFeature([-1])
+preWordBiFeature = BiSurrFeature([-1])
 # Next word and bigram tags
 nextWordBiFeature = BiSurrFeature([1])
 
@@ -91,10 +115,11 @@ BASE = [TagFeature(True), BigramFeature()]
 BASE_NOCASE = [TagFeature(False), BigramFeature()]
 SUFFIX = lambda len1, len2, case=False : [SuffixFeature(leng, case) for leng in range(len1, len2 + 1)]
 PREFIX = lambda len1, len2, case=False : [PrefixFeature(leng, case) for leng in range(len1, len2 + 1)]
-SURR_UNI = [prevWordFeature, nextWordFeature]
-SURR_BI = [prevWordBiFeature, nextWordBiFeature]
+SURR_UNI = [preWordFeature, nextWordFeature]
+SURR_BI = [preWordBiFeature, nextWordBiFeature]
 
-features = [TagFeature(False)] + SUFFIX(1, 3) + PREFIX(1, 3) + SURR_UNI
+features = [TagFeature(False), preWordFeature, nextWordFeature, prepreWordFeature, nextnextWordFeature, \
+    precuWordFeature, cunextWordFeature, preprecuWordFeature, precunextWordFeature, cunextnextWordFeature]
 
 if __name__ == '__main__':
     args = Argument(sys.argv[2:])
@@ -102,16 +127,19 @@ if __name__ == '__main__':
         iter_n = int(args.get('-it', 5))
         model_file = args.get('-m', 'glm/data/test.model')
         train_file = args.get('-f', 'glm/data/train.dat')
+        batch_num = int(args.get('-b', '2000'))
         # load all label
+        ln = 0
         for l in read_train_data(train_file):
+            ln += 1
             pass
         print >> sys.stdout, 'all label %s' % ALL_LABEL
         p = Perceptron(train_file, features, model_file)
-        p.train(iter_n)
+        p.train(iter_n, batch_num / float(ln))
 
     elif sys.argv[1] == 'tag':
         model_file = args.get('-m', 'glm/data/test.model')
-        test_file = args.get('-f', 'glm/data/train.dat')
+        test_file = args.get('-f', 'glm/data/test.mini.dat')
         test_output_file = args.get('-o', 'glm/data/test.out')
         # load all label
         for l in read_test_data(test_file):
