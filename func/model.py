@@ -1,6 +1,11 @@
 # -*- coding: utf-8 -*-
 
 from collections import defaultdict
+import sys
+import random
+import numpy as np
+import time
+
 from util import Label
 
 class Model:
@@ -10,9 +15,11 @@ class Model:
         feature name is generate by feature_templale function with input in form of 
         [s_i-1, s_i, X, i]
         '''
+        self.cache = defaultdict(lambda: {})
         self.model = defaultdict(lambda: 0)
         self.feature = featrue_template_list
         self.label_list = label_list
+        self.timef = 0
 
         # if have, load the model from file
         if model_file:
@@ -64,30 +71,59 @@ class Model:
                 [self[[i, observe_data, i, j]] for l in xrange(label_num)]
 
 
-
-
-
-    def viterbi(self, observe_data):
+    '''
+    prior is in the form:
+    word -> [possible tag1, possible tag2, ...]
+    '''
+    def viterbi(self, observe_data, prior = {}):
         def argmax(ls): return max(ls, key = lambda x: x[1])
-
         sample_num = len(observe_data)
         label_num = len(self.label_list)
         '''
         metrix[i][j] means the max "probability" when the i th label is self.label_list[j]
         '''
         metrix = [[0 for l in xrange(label_num)] for i in xrange(sample_num)]
+        #metrix = np.zeros(shape=(sample_num, label_num), dtype=np.int)
         '''
         back[i][j] mean the best previous label when the i th label is self.label_list[j]
         '''
         back = [[0 for l in xrange(label_num)] for i in xrange(sample_num)]
+        #back = np.zeros(shape=(sample_num, label_num), dtype=np.int)
+
         # init metrix[0][0:len(self.label_list)]
-        metrix[0] = [self[[[Label.START, self.label_list[l]], observe_data, 0]] for l in xrange(label_num)]
+        metrix[0] = [self[[[Label.START, self.label_list[l]], observe_data, 0]] \
+            #if not prior.has_key(observe_data[0]) or prior[observe_data[0]].has_key(self.label_list[l]) \
+            #else 0 \
+            for l in xrange(label_num)]
+        
+        start = time.clock()
         # dynimic programming
         for i in xrange(1, sample_num):
             for l in xrange(label_num):
-                back[i][l], metrix[i][l] = argmax([ \
-                    (lj, metrix[i-1][lj] + self[[[self.label_list[lj], self.label_list[l]], observe_data, i]]) \
-                    for lj in xrange(label_num)])
+                #if prior.has_key(observe_data[i]) and not prior[observe_data[i]].has_key(self.label_list[l]):
+                #    back[i][l] = -1
+                #    metrix[i][l] = 0
+                #else:
+                max_pre = -1
+                max_score = -sys.maxint
+                cu_ws = self[[[Label.START, self.label_list[l]], observe_data, i]]
+                for lj in xrange(label_num):
+                    sc = metrix[i-1][lj] + cu_ws
+                    if sc > max_score:
+                        max_score = sc
+                        max_pre = lj
+                    
+                    #back[i][l], metrix[i][l] = argmax([ \
+                    #    (lj, metrix[i-1][lj] + self[[[self.label_list[lj], self.label_list[l]], observe_data, i]]) \
+                        #if not prior.has_key(observe_data[i-1]) or prior[observe_data[i-1]].has_key(self.label_list[lj]) \
+                        #else (-1, -sys.maxint) \
+                    #    for lj in xrange(label_num)])
+                
+                metrix[i][l] = max_score
+                back[i][l] = max_pre
+        end = time.clock()
+        self.timef += end - start
+
         # back infer
         infer_label = [argmax([(j, metrix[sample_num-1][j]) for j in xrange(label_num)])[0]]
         for i in xrange(sample_num - 1):
